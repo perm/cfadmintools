@@ -2,14 +2,14 @@
 
 class Jbod(object):
     '''
+    '''
     def __init__(self, jbod_model):
         if jbod_model.lower() == 'sc847':
             self.jbod_model = jbod_model
             self.drives = 45
-            print self.drives
 
     def derive_physical_id(self, controller_model, device):
-       
+
         device_number = int(device.split('u')[1])
         if int(device_number) > self.drives - 1:
             raise ValueError("Invalid device: %s" % device)
@@ -23,6 +23,9 @@ class Jbod(object):
 
         return physical_location
 
+    def drive_count(self):
+        return self.drives
+
 if __name__ == '__main__':
     f = Jbod('sc847')
     l = f.derive_physical_id('8885Q', 'c1u1')
@@ -30,4 +33,5 @@ if __name__ == '__main__':
     x = Jbod('sc847')
     m = x.derive_physical_id('H810', 'c2u34')
     print m
+    print(x.drive_count())
 
