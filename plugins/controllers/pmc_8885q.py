@@ -7,43 +7,42 @@ from jbods import Jbod
 from pprint import pprint
 
 class Pmc8885qController(object):
+    def __init__(self):
     #def __init__(self, config_dict, logger):
     #    self.config = config_dict
     #    self.logger = logger
     #    self.arcconf_path = self.config['pmc8885q']['arcconf_path']
     #    self.device_root = self.config.get('device_root', '/srv/node')
-    #    self.admin = AdminOS()
+        self.admin = AdminOS()
 
 
     def blink_device(self, controller, device, jbod, binary='/usr/bin/arcconf', pd=False):
-       a = AdminOS()
        if pd:
            pd_loc = Pmc8885qController.derive_pd(self, device, jbod)
            device = '%s %s' % (pd_loc[0], pd_loc[1])
-           stdout,stderr = a.run('%s IDENTIFY %s DEVICE %s start' % (binary,
+           stdout,stderr = self.admin.run('%s IDENTIFY %s DEVICE %s start' % (binary,
                                                                 controller,
                                                                 device))
            print stdout
 
        else:
            device = device.split('u')[1]
-           stdout,stderr = a.run('%s IDENTIFY %s LOGICALDRIVE %s start' % (binary,
+           stdout,stderr = self.admin.run('%s IDENTIFY %s LOGICALDRIVE %s start' % (binary,
                                                                       controller,
                                                                       device))
            print stdout
 
     def unblink_device(self, controller, device, jbod, binary='/usr/bin/arcconf', pd=False):
-        a =  AdminOS()
         if pd:
             pd_loc = Pmc8885qController.derive_pd(self, device, jbod)
             device = '%s %s' % (pd_loc[0], pd_loc[1])
-            stdout,stderr = a.run('%s IDENTIFY %s DEVICE %s stop' % (binary,
+            stdout,stderr = self.admin.run('%s IDENTIFY %s DEVICE %s stop' % (binary,
                                                                 controller,
                                                                 device))
             print stdout
         else:
             device = device.split('u')[1]
-            stdout,stderr = a.run('%s IDENTIFY %s LOGICALDRIVE %s stop' % (binary,
+            stdout,stderr = self.admin.run('%s IDENTIFY %s LOGICALDRIVE %s stop' % (binary,
                                                                       controller,
                                                                       device))
             print stdout
@@ -82,8 +81,7 @@ class Pmc8885qController(object):
         #the Raw or Ready state (that is, not part of any logical drive). A drive in the Raw 
         #state has no Adaptec meta-data but may or may not have an OS partition.
         #e.g arcconf UNINIT 1 0 16
-        a = AdminOS()
-        stdout,stderr = a.run('%s UNINIT %s %s') % (binary,
+        stdout,stderr = self.admin.run('%s UNINIT %s %s') % (binary,
                                                    controller)
 
     def uninit_all(self, controller, binary='/usr/bin/arcconf'):
@@ -92,8 +90,7 @@ class Pmc8885qController(object):
         #the Raw or Ready state (that is, not part of any logical drive). A drive in the Raw 
         #state has no Adaptec meta-data but may or may not have an OS partition.
         #e.g arcconf UNINIT 1 ALL
-        a = AdminOS()
-        stdout,stderr = a.run('%s UNINIT %s ALL') % (binary,
+        stdout,stderr = self.admin.run('%s UNINIT %s ALL') % (binary,
                                                          controller)
 
     def remove_ld(self, controller, device, binary='/usr/bin/arcconf'):
@@ -106,8 +103,7 @@ class Pmc8885qController(object):
         :returns a boolean. True on success, False on failure.
         '''
         device = device.split('u')[1]
-        a = AdminOS()
-        stdout,stderr = a.run('%s DELETE %s LOGICALDRIVE %s' % (binary,
+        stdout,stderr = self.admin.run('%s DELETE %s LOGICALDRIVE %s' % (binary,
                                                          controller,
                                                          device))
         if stderr:
@@ -123,8 +119,7 @@ class Pmc8885qController(object):
         :returns a dict with logical disk information
         '''
         device = device.split('u')[1]
-        a = AdminOS()
-        stdout,stderr = a.run('%s getconfig %s LD %s' % (binary,
+        stdout,stderr = self.admin.run('%s getconfig %s LD %s' % (binary,
                                                          controller,
                                                          device))
         try:
@@ -171,9 +166,8 @@ class Pmc8885qController(object):
         :returns a list of dictionaries that contai a dictionary of 
          device attributes
         '''
-        a = AdminOS()
         pd_list = []
-        stdout,stderr = a.run('%s getconfig %s PD' % (binary,
+        stdout,stderr = self.admin.run('%s getconfig %s PD' % (binary,
                                                       controller))
         res = re.split(" +Device\ #", stdout)
         for item in res:
@@ -197,16 +191,15 @@ class Pmc8885qController(object):
 
 if __name__ == '__main__':
     p = Pmc8885qController()
-    #ld_info = p.get_ld_info('1', 'c1u25')
-    #pprint(ld_info)
+    ld_info = p.get_ld_info('1', 'c1u26')
+    pprint(ld_info)
     
-    #pd_info = p._fetchall_pd_info('1')
-    #pprint(pd_info)
+    pd_info = p._fetchall_pd_info('1')
+    pprint(pd_info)
     #p.remove_ld('1','c1u25') 
     #p.get_pd_info('1', 'c1u44', 'sc847')
     #print(p.derive_pd('c1u44', 'sc847'))
     #p.blink_device('1', 'c1u44', 'sc847')
     #p.unblink_device('1', 'c1u44', 'sc847')
-    p.blink_device('1', 'c1u44', 'sc847', pd=True)
-    p.unblink_device('1', 'c1u44', 'sc847', pd=True)
-
+    #p.blink_device('1', 'c1u44', 'sc847', pd=True)
+    #p.unblink_device('1', 'c1u44', 'sc847', pd=True)
