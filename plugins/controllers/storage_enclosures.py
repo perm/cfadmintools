@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-class Jbod(object):
+class Enclosure(object):
     '''
     '''
-    def __init__(self, jbod_model):
-        if jbod_model.lower() == 'sc847':
-            self.jbod_model = jbod_model
+    def __init__(self, enclosure_model):
+        if enclosure_model.lower() == 'sc847':
+            self.enclosure_model = enclosure_model
             self.drives = 45
 
     def derive_physical_id(self, controller_model, device):
@@ -13,9 +13,9 @@ class Jbod(object):
         device_number = int(device.split('u')[1])
         if int(device_number) > self.drives - 1:
             raise ValueError("Invalid device: %s" % device)
-        if controller_model.lower() == '8885q' and self.jbod_model == 'sc847':
+        if controller_model.lower() == '8885q' and self.enclosure_model == 'sc847':
             physical_location = '0 %s' % (16 + device_number)
-        elif controller_model.lower() == 'h810' and self.jbod_model == 'sc847':
+        elif controller_model.lower() == 'h810' and self.enclosure_model == 'sc847':
             x, y = divmod(int(device_number), 24)
             physical_location = '%d:0:%d' % (x, y)
         else:
@@ -27,11 +27,10 @@ class Jbod(object):
         return self.drives
 
 if __name__ == '__main__':
-    f = Jbod('sc847')
+    f = Enclosure('sc847')
     l = f.derive_physical_id('8885Q', 'c1u1')
     print l
-    x = Jbod('sc847')
+    x = Enclosure('sc847')
     m = x.derive_physical_id('H810', 'c2u34')
     print m
     print(x.drive_count())
-

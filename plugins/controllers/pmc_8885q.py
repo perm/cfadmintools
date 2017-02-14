@@ -3,58 +3,55 @@
 import re
 import subprocess
 from admin_os import AdminOS
-from jbods import Jbod
+from storage_enclosures import Enclosure
 from pprint import pprint
 
 class Pmc8885qController(object):
-    def __init__(self):
-    #def __init__(self, config_dict, logger):
-    #    self.config = config_dict
-    #    self.logger = logger
-    #    self.arcconf_path = self.config['pmc8885q']['arcconf_path']
-    #    self.device_root = self.config.get('device_root', '/srv/node')
+    def __init__(self, enclosure, binary='/usr/bin/arcconf'):
+        self.enclosure = enclosure
+        self.binary = binary
         self.admin = AdminOS()
+        #self.logger = logger
 
 
-    def blink_device(self, controller, device, jbod, binary='/usr/bin/arcconf', pd=False):
+    def blink_device(self, controller, device, pd=False):
        if pd:
-           pd_loc = Pmc8885qController.derive_pd(self, device, jbod)
+           pd_loc = Pmc8885qController.derive_pd(self, device)
            device = '%s %s' % (pd_loc[0], pd_loc[1])
-           stdout,stderr = self.admin.run('%s IDENTIFY %s DEVICE %s start' % (binary,
-                                                                controller,
-                                                                device))
+           stdout,stderr = self.admin.run('%s IDENTIFY %s DEVICE %s start' % (self.binary,
+                                                                              controller,
+                                                                              device))
            print stdout
 
        else:
            device = device.split('u')[1]
-           stdout,stderr = self.admin.run('%s IDENTIFY %s LOGICALDRIVE %s start' % (binary,
-                                                                      controller,
-                                                                      device))
+           stdout,stderr = self.admin.run('%s IDENTIFY %s LOGICALDRIVE %s start' % (self.binary,
+                                                                                    controller,
+                                                                                    device))
            print stdout
 
-    def unblink_device(self, controller, device, jbod, binary='/usr/bin/arcconf', pd=False):
+    def unblink_device(self, controller, device, pd=False):
         if pd:
-            pd_loc = Pmc8885qController.derive_pd(self, device, jbod)
+            pd_loc = Pmc8885qController.derive_pd(self, device)
             device = '%s %s' % (pd_loc[0], pd_loc[1])
-            stdout,stderr = self.admin.run('%s IDENTIFY %s DEVICE %s stop' % (binary,
-                                                                controller,
-                                                                device))
+            stdout,stderr = self.admin.run('%s IDENTIFY %s DEVICE %s stop' % (self.binary,
+                                                                              controller,
+                                                                              device))
             print stdout
         else:
             device = device.split('u')[1]
-            stdout,stderr = self.admin.run('%s IDENTIFY %s LOGICALDRIVE %s stop' % (binary,
-                                                                      controller,
-                                                                      device))
+            stdout,stderr = self.admin.run('%s IDENTIFY %s LOGICALDRIVE %s stop' % (self.binary,
+                                                                                    controller,
+                                                                                    device))
             print stdout
             
 
-    def derive_pd(self, device, jbod):
+    def derive_pd(self, device):
        '''
        device: 'a string such as c1u1'
-       jbod: 'a string stating the jbod model eg 'sc847'
        returns: list of the channel and device for specified device
        '''
-       j = Jbod(jbod)
+       j = Enclosure(self.enclosure)
        rdevice = int(device.split('u')[1])
        if rdevice > (j.drive_count()) - 1:
            #logger
@@ -63,11 +60,11 @@ class Pmc8885qController(object):
        pd = j.derive_physical_id('8885Q', device).split(" ")
        return pd
        
-    def get_pd_info(self, controller, device, jbod):         
+    def get_pd_info(self, controller, device):         
         '''
         '''
         pd_data = Pmc8885qController._fetchall_pd_info(self,controller)
-        pd_loc = Pmc8885qController.derive_pd(self, device, jbod)
+        pd_loc = Pmc8885qController.derive_pd(self, device)
         for pd_pool in pd_data:
             for dev in pd_pool:
                if pd_loc[1] in pd_pool[dev]['reported channel,device(t:l)']:
@@ -75,53 +72,51 @@ class Pmc8885qController(object):
                    pprint(pd_pool[dev]) 
 
 
-    def uninit(self, controller, device, binary='/usr/bin/arcconf'):
+    def uninit(self, controller, device):
         #The uninitialize command clears Adaptec meta-data and any OS partitions from a drive; 
         #existing data on the drive is destroyed. Drives can uninitialized only if they are in 
         #the Raw or Ready state (that is, not part of any logical drive). A drive in the Raw 
         #state has no Adaptec meta-data but may or may not have an OS partition.
         #e.g arcconf UNINIT 1 0 16
-        stdout,stderr = self.admin.run('%s UNINIT %s %s') % (binary,
-                                                   controller)
+        stdout,stderr = self.admin.run('%s UNINIT %s %s' %  (self.binary,
+                                                             controller))
 
-    def uninit_all(self, controller, binary='/usr/bin/arcconf'):
+    def uninit_all(self, controller):
         #The uninitialize command clears Adaptec meta-data and any OS partitions from a drive; 
         #existing data on the drive is destroyed. Drives can uninitialized only if they are in 
         #the Raw or Ready state (that is, not part of any logical drive). A drive in the Raw 
         #state has no Adaptec meta-data but may or may not have an OS partition.
         #e.g arcconf UNINIT 1 ALL
-        stdout,stderr = self.admin.run('%s UNINIT %s ALL') % (binary,
-                                                         controller)
+        stdout,stderr = self.admin.run('%s UNINIT %s ALL' %  (self.binary,
+                                                              controller))
 
-    def remove_ld(self, controller, device, binary='/usr/bin/arcconf'):
+    def remove_ld(self, controller, device):
         #Deletes a logical drive, JBOD, or maxCache logical device. 
         #All data stored on the logical drive or JBOD will be lost
         '''
         :param controller
         :param device
-        :binary location of arcconf raid util
         :returns a boolean. True on success, False on failure.
         '''
         device = device.split('u')[1]
-        stdout,stderr = self.admin.run('%s DELETE %s LOGICALDRIVE %s' % (binary,
-                                                         controller,
-                                                         device))
+        stdout,stderr = self.admin.run('%s DELETE %s LOGICALDRIVE %s' % (self.binary,
+                                                                         controller,
+                                                                         device))
         if stderr:
             return False
         else:
             return True
 
-    def get_ld_info(self, controller, device, binary='/usr/bin/arcconf'):
+    def get_ld_info(self, controller, device):
         '''
         :param controller
         :param device
-        :binary location of arcconf raid util
         :returns a dict with logical disk information
         '''
         device = device.split('u')[1]
-        stdout,stderr = self.admin.run('%s getconfig %s LD %s' % (binary,
-                                                         controller,
-                                                         device))
+        stdout,stderr = self.admin.run('%s getconfig %s LD %s' % (self.binary,
+                                                                  controller,
+                                                                  device))
         try:
             device_info = stdout.split('\n')[5:-8]
         except:
@@ -157,18 +152,17 @@ class Pmc8885qController(object):
 
         return ld_info
 
-    def _fetchall_pd_info(self, controller, binary='/usr/bin/arcconf'):
+    def _fetchall_pd_info(self, controller):
         '''
         puts output of an arcconf pd listing into a consumable form.
         :param controller
         :param device
-        :binary location of arcconf raid util
         :returns a list of dictionaries that contai a dictionary of 
          device attributes
         '''
         pd_list = []
-        stdout,stderr = self.admin.run('%s getconfig %s PD' % (binary,
-                                                      controller))
+        stdout,stderr = self.admin.run('%s getconfig %s PD' % (self.binary,
+                                                               controller))
         res = re.split(" +Device\ #", stdout)
         for item in res:
             device_id = item.split('\n')[0]
@@ -190,8 +184,8 @@ class Pmc8885qController(object):
 
 
 if __name__ == '__main__':
-    p = Pmc8885qController()
-    ld_info = p.get_ld_info('1', 'c1u26')
+    p = Pmc8885qController('sc847')
+    ld_info = p.get_ld_info('1', 'c1u20')
     pprint(ld_info)
     
     pd_info = p._fetchall_pd_info('1')
@@ -203,3 +197,4 @@ if __name__ == '__main__':
     #p.unblink_device('1', 'c1u44', 'sc847')
     #p.blink_device('1', 'c1u44', 'sc847', pd=True)
     #p.unblink_device('1', 'c1u44', 'sc847', pd=True)
+
