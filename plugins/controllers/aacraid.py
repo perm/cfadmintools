@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
+from __future__ import division
 import re
 import subprocess
 from admin_os import AdminOS
 from storage_enclosures import Enclosure
 from pprint import pprint
 
-class Pmc8885qController(object):
+class AacraidController(object):
     def __init__(self, controller_id, enclosure, binary='/usr/bin/arcconf'):
         self.controller_id = controller_id
         self.enclosure = enclosure
@@ -15,25 +16,32 @@ class Pmc8885qController(object):
         #self.logger = logger
 
 
-    def blink_device(self, device, pd=False):
-       if pd:
-           pd_loc = Pmc8885qController.derive_pd(self, device)
-           device = '%s %s' % (pd_loc[0], pd_loc[1])
-           stdout,stderr = self.admin.run('%s IDENTIFY %s DEVICE %s start' % (self.binary,
-                                                                              self.controller_id,
-                                                                              device))
-           print stdout
+    def create_ld(self, device, pd=False):
+        if pd:
+            uninit = AacraidController.uninit(self, device)
+        else:
+            pd_loc = AacraidController.derive_pd(self, device)
+            uninit = AacraidController.uninit(self, device) 
 
-       else:
-           device = device.split('u')[1]
-           stdout,stderr = self.admin.run('%s IDENTIFY %s LOGICALDRIVE %s start' % (self.binary,
+    def blink_device(self, device, pd=False):
+        if pd:
+            pd_loc = AacraidController.derive_pd(self, device)
+            device = '%s %s' % (pd_loc[0], pd_loc[1])
+            stdout,stderr = self.admin.run('%s IDENTIFY %s DEVICE %s start' % (self.binary,
+                                                                               self.controller_id,
+                                                                               device))
+            print stdout
+
+        else:
+            device = device.split('u')[1]
+            stdout,stderr = self.admin.run('%s IDENTIFY %s LOGICALDRIVE %s start' % (self.binary,
                                                                                     self.controller_id,
                                                                                     device))
-           print stdout
+            print stdout
 
     def unblink_device(self, device, pd=False):
         if pd:
-            pd_loc = Pmc8885qController.derive_pd(self, device)
+            pd_loc = AacraidController.derive_pd(self, device)
             device = '%s %s' % (pd_loc[0], pd_loc[1])
             stdout,stderr = self.admin.run('%s IDENTIFY %s DEVICE %s stop' % (self.binary,
                                                                               self.controller_id,
@@ -61,26 +69,36 @@ class Pmc8885qController(object):
        pd = j.derive_physical_id('8885Q', device).split(" ")
        return pd
        
-    def get_pd_info(self, device):         
+    def get_pd_info(self, device, native=False):         
         '''
         '''
-        pd_data = Pmc8885qController._fetchall_pd_info(self)
-        pd_loc = Pmc8885qController.derive_pd(self, device)
+        pd_data = AacraidController._fetchall_pd_info(self)
+        pd_loc = AacraidController.derive_pd(self, device)
         for pd_pool in pd_data:
             for dev in pd_pool:
                if pd_loc[1] in pd_pool[dev]['reported channel,device(t:l)']:
-              #if '58' in pd_pool[dev]['reported channel,device(t:l)']:
-                   pprint(pd_pool[dev]) 
+                   if native:
+                       pd = pd_pool[dev]
+                       return pd
+                       #pprint(pd_pool[dev]) 
+                   else:
+                       pd = {'id': pd_pool[dev]['reported channel,device(t:l)'],
+                             'state': pd_pool[dev]['state'],
+                             'model': pd_pool[dev]['model'],
+                             'serial':  pd_pool[dev]['serial number'],
+                             'firmware': pd_pool[dev]['firmware'],
+                             'size': str(round(int(pd_pool[dev]['total size'].split()[0]) / 1024 / 1024)) + ' TB'}   #need to transform this to TB or bytes
+                       return pd
 
-
-    def uninit(self, device):
+    def uninit(self, pdevice):
         #The uninitialize command clears Adaptec meta-data and any OS partitions from a drive; 
         #existing data on the drive is destroyed. Drives can uninitialized only if they are in 
         #the Raw or Ready state (that is, not part of any logical drive). A drive in the Raw 
         #state has no Adaptec meta-data but may or may not have an OS partition.
         #e.g arcconf UNINIT 1 0 16
         stdout,stderr = self.admin.run('%s UNINIT %s %s' %  (self.binary,
-                                                             self.controller_id))
+                                                             self.controller_id,
+                                                             pdevice))
 
     def uninit_all(self):
         #The uninitialize command clears Adaptec meta-data and any OS partitions from a drive; 
@@ -107,7 +125,7 @@ class Pmc8885qController(object):
         else:
             return True
 
-    def get_ld_info(self, device):
+    def get_ld_info(self, device, native=False):
         '''
         :param device
         :returns a dict with logical disk information
@@ -148,7 +166,7 @@ class Pmc8885qController(object):
             ld_info['enclosure'] = 'na'
             ld_info['slot'] = 'na'
             ld_info['serial'] = 'na'
-
+       
         return ld_info
 
     def _fetchall_pd_info(self):
@@ -182,14 +200,14 @@ class Pmc8885qController(object):
 
 
 if __name__ == '__main__':
-    p = Pmc8885qController('1','sc847')
-    ld_info = p.get_ld_info('c1u20')
-    pprint(ld_info)
+    p = AacraidController('1','sc847')
+    #ld_info = p.get_ld_info('c1u20')
+    # pprint(ld_info)
     
-    pd_info = p._fetchall_pd_info()
-    pprint(pd_info)
+    #pd_info = p._fetchall_pd_info()
+    #pprint(pd_info)
     #p.remove_ld('1','c1u25') 
-    #p.get_pd_info('1', 'c1u44', 'sc847')
+    pprint(p.get_pd_info('c1u44', native=False))
     #print(p.derive_pd('c1u44', 'sc847'))
     #p.blink_device('1', 'c1u44', 'sc847')
     #p.unblink_device('1', 'c1u44', 'sc847')
