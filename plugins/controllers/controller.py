@@ -56,6 +56,10 @@ class StorageController(object):
     def delete_logical_device(self, device):
         result = self.controller.remove_ld(device)
         return result
+    
+    def ld_to_raw_device(self):
+        result = self.controller.ld_to_raw_device():
+        return result
 
 if __name__ == '__main__':
     p = StorageController('8885q', '1', 'sc847')

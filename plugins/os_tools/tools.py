@@ -7,7 +7,6 @@ import grp
 import sys
 import fileinput
 
-
 class AdminOS(object):
     def run(self, cmd):
         run_cmd = shlex.split(cmd)
@@ -18,12 +17,12 @@ class AdminOS(object):
     def mount(self, device, label=True, mount_path='/bin/mount', mount_dest=None):
         if label:
             cmd = '%s LABEL=%s' % (mount_path, device)
-        elif mount_dest is not None: 
-            cmd = '%s /dev/%s %s' % (mount_path, device, mount_dest) 
+        elif mount_dest is not None:
+            cmd = '%s /dev/%s %s' % (mount_path, device, mount_dest)
         self.run(cmd)
 
     def chown(self, device, user='swift', group='swift', path='/srv/node/'):
-        uid = pwd.getpwnam(user).pw_uid 
+        uid = pwd.getpwnam(user).pw_uid
         gid = grp.getgrnam(group).gr_gid
         path = path + device
         print 'os.chown(%s, %s, %s)' % (path, uid, gid)
@@ -39,9 +38,24 @@ class AdminOS(object):
                     if line.startswith('LABEL=%s ' % (device)):
                         label_good = True
                 sys.stdout.write(line)
-            except (OsError, IOError) as e:
-                #logger.error(str(e))
-                label_good = False
+        except (OSError,IOError) as e:
+            #logger.error(str(e))
+            label_good = False
+
+            return label_good
+
+    def get_mount_points(self, dir='/srv/node'):
+        return os.listdir(dir)
+   
+    def get_raw_device_name(self, device, devdir='/dev/'):
+        return os.readlink(devdir + device + 'p')
             
-            return label_good 
-          
+
+
+if __name__ == '__main__':
+    i = AdminOS()
+    dirs = i.get_mount_points()
+    print dirs
+    raw_dev = i.get_raw_device_name('c1u25')
+    print raw_dev
+
