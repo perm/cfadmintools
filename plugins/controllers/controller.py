@@ -58,10 +58,24 @@ class StorageController(object):
         return result
     
     def ld_to_raw_device(self):
-        result = self.controller.ld_to_raw_device():
+        result = self.controller.ld_to_raw_device()
         return result
+
+    def get_disassociated_pd(self):
+        result = self.controller.get_disassociated_pd()
+        return result
+
+    def get_bad_pd(self):
+        result = self.controller.get_bad_pd()
+        return result
+
+
 
 if __name__ == '__main__':
     p = StorageController('8885q', '1', 'sc847')
     #pprint(p.get_logical_device('c1u26'))
-    pprint(p.get_physical_device('c1u26'))
+    #pprint(p.get_physical_device('c1u26'))
+    print(p.get_bad_pd())
+    print(p.get_disassociated_pd())
+    print(p.ld_to_raw_device())
+

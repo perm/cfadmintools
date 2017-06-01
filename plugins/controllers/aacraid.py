@@ -185,6 +185,15 @@ class AacraidController(object):
        
         return ld_info
 
+    def get_ld_status(self, device, native=False):
+        '''
+        :param device
+        :returns a string with status of logical device
+        '''
+        result = AacraidController.get_ld_info(self, device)
+        status = result['status of logical device']
+        return status
+
     def _fetchall_pd_info(self):
         '''
         puts output of an arcconf pd listing into a consumable form.
@@ -215,6 +224,38 @@ class AacraidController(object):
         return pd_list
 
 
+    def get_disassociated_pd(self):
+        '''
+        returns a list of physical disks that have no logical disks
+        associated with them
+        '''
+        devices = []
+        pd = AacraidController._fetchall_pd_info(self)
+        for device in pd:
+            drive = device
+            for key, device_value in drive.iteritems():
+                try:
+                    if device_value['state'] != 'online':
+                        devices.append(device_value['reported channel,device(t:l)'])
+                except:
+                    continue
+        return devices
+                          
+    def get_bad_pd(self):
+        '''returns a list of physical disks that have been flagged with smart errors'''
+        devices = []
+        pd = AacraidController._fetchall_pd_info(self)
+        for device in pd:
+            drive = device
+            for key, device_value in drive.iteritems():
+                try:
+                    if device_value['s.m.a.r.t.'] != 'no':
+                        devices.append(device_value['reported channel,device(t:l)'])
+                except:
+                    continue
+        return devices
+     
+
     def ld_to_raw_device(self):
         '''
         maps logical device to sd device name.
@@ -236,13 +277,17 @@ class AacraidController(object):
 
 
 if __name__ == '__main__':
-    p = AacraidController('2','sc847')
-    #ld_info = p.get_ld_info('c1u20')
-    # pprint(ld_info)
-    p.flush_preservedcache('c2u28')
-    p.uninit('0 28')
-    #pd_info = p._fetchall_pd_info()
-    #pprint(pd_info)
+    p = AacraidController('1','sc847')
+    #ld_info = p.get_ld_info('c1u25')
+    #pprint(ld_info)
+    #status = p.get_ld_status('c1u25')
+    #print status
+    #p.flush_preservedcache('c2u28')
+    #p.uninit('0 28')
+    pd_info = p._fetchall_pd_info()
+    pprint(pd_info)
+    print(p.get_disassociated_pd())
+    print(p.get_bad_pd())
     #p.remove_ld('1','c1u25') 
     #pprint(p.get_pd_info('c1u44', native=False))
     #print(p.derive_pd('c1u25'))
@@ -250,30 +295,3 @@ if __name__ == '__main__':
     #p.unblink_device('1', 'c1u44', 'sc847')
     #p.blink_device('1', 'c1u44', 'sc847', pd=True)
     #p.unblink_device('1', 'c1u44', 'sc847', pd=True)
-
-#what to do if a failed device occurs
-#we don't care about drive order anymore
-#i.e if c1u0, c1u2, and c1u23 fail, we don't care about matching a particular logical device to physical disk or filesystem
-#once a bad device has been detected and replaced, we'll just use that device on a first come first serve basis.
-#we want to make sure that devices are serviced in fifo manner so we need to take note of the timestamps of the failed devices
-
-#the challenge with this setup is determining what logical disk is currently associated with the drive so that we can ensure that we are deleting the correct logical device before swapping.
-#for example:
-#c1u0 = LD 20
-#c1u2 = LD 22
-#c1u23 = LD 2
-
-#seems as if the only legit way to do this is to 
-#1. probe all of the cXX devices for its label
-#2. if label matches the unmounted device get its system designated name i.e /dev/sdX
-#3. dump logical device info for drives from raid controller, and find the logical device that matches /dev/sdX
-#This will only work with drives that contain labels and the controller must display the associated linux device
-
-#what if we can't find a drive with an associated LD?
-#1. This could mean that the device has already been deleted, or it's possible that the device has failed catastrophically
-#2. This shouldn't be a problem because we should always maintain a 1 to 1 mapping with unmounted devices to missing logical devices
-
-#so what do we need to implement?
-#0. a function that returns of list of devices to be checked (everything in /srv/node)
-#1. a method that takes an unmounted device name and returns the scsi device id associated with an unmounted drive
-#2. a method that takes a scsi device id and returns an LD for deletion
