@@ -87,7 +87,8 @@ class AacraidController(object):
                              'model': pd_pool[dev]['model'],
                              'serial':  pd_pool[dev]['serial number'],
                              'firmware': pd_pool[dev]['firmware'],
-                             'size': str(round(int(pd_pool[dev]['total size'].split()[0]) / 1024 / 1024)) + ' TB'}   #need to transform this to TB or bytes
+                             'size': str(round(int(pd_pool[dev]['total size'].split()[0]) / 1024 / 1024)) + ' TB',   #need to transform this to TB or bytes
+                             'device': device}
                        return pd
 
     def uninit(self, pdevice):
@@ -275,19 +276,54 @@ class AacraidController(object):
 
         return ld_to_dev
 
-
+    def get_pci_slot(self):
+        stdout, stderr = self.admin.run('%s LIST' % self.binary)
+        tmp = stdout.split('\n')
+        slots = {}
+        for item in tmp:
+            m = re.search(r'Controller \d|\d\d|\d\d\d:+', item)
+            try:
+                if m.group(0):
+                    l = item.split()
+                    controller = l[1].replace(':','')
+                    slot = l[5].replace(',','') 
+                    slots[controller] = slot
+                
+            except:
+                continue
+        for key,item in slots.iteritems():
+            if int(item) > 100:
+                stdout, stderr = self.admin.run('lspci -d 9005:028d')
+                hba = stdout.split('\n')
+                for controller in hba:
+                    c = controller.split()
+                    if c:
+                        #print c[0]
+                        stdout1, stderr1 = self.admin.run('lspci -vs %s' % c[0])
+                        hba1 = stdout1.split('\n')
+                        cont_slot = hba1[2].split(':')[1].lstrip()
+                        if cont_slot in slots.values():
+                            pass
+                        else:
+                            cont_slot_final = cont_slot
+                            slots[key] = cont_slot_final
+                    else:
+                        continue
+        return slots[self.controller_id]
 if __name__ == '__main__':
-    p = AacraidController('1','sc847')
+    p = AacraidController('2','sc847')
     #ld_info = p.get_ld_info('c1u25')
     #pprint(ld_info)
     #status = p.get_ld_status('c1u25')
     #print status
     #p.flush_preservedcache('c2u28')
     #p.uninit('0 28')
-    pd_info = p._fetchall_pd_info()
-    pprint(pd_info)
-    print(p.get_disassociated_pd())
-    print(p.get_bad_pd())
+    #pd_info = p._fetchall_pd_info()
+    #pprint(pd_info)
+    slot = p.get_pci_slot()
+    print slot
+    #print(p.get_disassociated_pd())
+    #print(p.get_bad_pd())
     #p.remove_ld('1','c1u25') 
     #pprint(p.get_pd_info('c1u44', native=False))
     #print(p.derive_pd('c1u25'))

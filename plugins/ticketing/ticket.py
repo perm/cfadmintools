@@ -32,6 +32,7 @@ if __name__ == '__main__':
                'serial': 'pn2334peh5687t',
                'size': '4.0 TB',
                'state': 'online',
-               'device': 'c1u1'}
+               'device': 'c1u1',
+               'slot': '4'}
 
     print t.render_template(context)
