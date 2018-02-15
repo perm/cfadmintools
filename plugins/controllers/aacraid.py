@@ -3,8 +3,8 @@
 from __future__ import division
 import re
 import subprocess
-from admin_os import AdminOS
-from storage_enclosures import Enclosure
+from ..os_tools.tools import AdminOS
+from .storage_enclosures import Enclosure
 from pprint import pprint
 
 class AacraidController(object):
@@ -27,14 +27,14 @@ class AacraidController(object):
         if pd:
             pd_loc = AacraidController.derive_pd(self, device)
             device = '%s %s' % (pd_loc[0], pd_loc[1])
-            stdout,stderr = self.admin.run('%s IDENTIFY %s DEVICE %s start' % (self.binary,
+            stdout,stderr,returncode = self.admin.run('%s IDENTIFY %s DEVICE %s start' % (self.binary,
                                                                                self.controller_id,
                                                                                device))
             print stdout
 
         else:
             device = device.split('u')[1]
-            stdout,stderr = self.admin.run('%s IDENTIFY %s LOGICALDRIVE %s start' % (self.binary,
+            stdout,stderr,returncode = self.admin.run('%s IDENTIFY %s LOGICALDRIVE %s start' % (self.binary,
                                                                                     self.controller_id,
                                                                                     device))
             print stdout
@@ -43,13 +43,13 @@ class AacraidController(object):
         if pd:
             pd_loc = AacraidController.derive_pd(self, device)
             device = '%s %s' % (pd_loc[0], pd_loc[1])
-            stdout,stderr = self.admin.run('%s IDENTIFY %s DEVICE %s stop' % (self.binary,
+            stdout,stderr,returncode = self.admin.run('%s IDENTIFY %s DEVICE %s stop' % (self.binary,
                                                                               self.controller_id,
                                                                               device))
             print stdout
         else:
             device = device.split('u')[1]
-            stdout,stderr = self.admin.run('%s IDENTIFY %s LOGICALDRIVE %s stop' % (self.binary,
+            stdout,stderr,returncode = self.admin.run('%s IDENTIFY %s LOGICALDRIVE %s stop' % (self.binary,
                                                                                     self.controller_id,
                                                                                     device))
             print stdout
@@ -78,6 +78,7 @@ class AacraidController(object):
             for dev in pd_pool:
                if pd_loc[1] in pd_pool[dev]['reported channel,device(t:l)']:
                    if native:
+                       print 'in native'
                        pd = pd_pool[dev]
                        return pd
                        #pprint(pd_pool[dev]) 
@@ -97,7 +98,7 @@ class AacraidController(object):
         #the Raw or Ready state (that is, not part of any logical drive). A drive in the Raw 
         #state has no Adaptec meta-data but may or may not have an OS partition.
         #e.g arcconf UNINIT 1 0 16
-        stdout,stderr = self.admin.run('%s UNINIT %s %s' %  (self.binary,
+        stdout,stderr,returncode = self.admin.run('%s UNINIT %s %s' %  (self.binary,
                                                              self.controller_id,
                                                              pdevice))
 
@@ -107,7 +108,7 @@ class AacraidController(object):
         #the Raw or Ready state (that is, not part of any logical drive). A drive in the Raw 
         #state has no Adaptec meta-data but may or may not have an OS partition.
         #e.g arcconf UNINIT 1 ALL
-        stdout,stderr = self.admin.run('%s UNINIT %s ALL' %  (self.binary,
+        stdout,stderr,returncode = self.admin.run('%s UNINIT %s ALL' %  (self.binary,
                                                               self.controller_id))
         print stdout
     #def create_ld(self, device):
@@ -121,7 +122,7 @@ class AacraidController(object):
         :returns a boolean. True on success, False on failure.
         '''
         device = device.split('u')[1]
-        stdout,stderr = self.admin.run('%s DELETE %s LOGICALDRIVE %s' % (self.binary,
+        stdout,stderr,returncode = self.admin.run('%s DELETE %s LOGICALDRIVE %s' % (self.binary,
                                                                          self.controller_id,
                                                                          device))
         if stderr:
@@ -133,7 +134,7 @@ class AacraidController(object):
     def flush_preservedcache(self, device):
         
         device = device.split('u')[1]
-        stdout,stderr = self.admin.run('%s PRESERVECACHE %s CLEAR LOGICALDRIVE %s noprompt' % (self.binary,
+        stdout,stderr,returncode = self.admin.run('%s PRESERVECACHE %s CLEAR LOGICALDRIVE %s noprompt' % (self.binary,
                                                                                                self.controller_id,
                                                                                                device))
         if stderr:
@@ -148,7 +149,7 @@ class AacraidController(object):
         :returns a dict with logical disk information
         '''
         device = device.split('u')[1]
-        stdout,stderr = self.admin.run('%s getconfig %s LD %s' % (self.binary,
+        stdout,stderr,returncode = self.admin.run('%s getconfig %s LD %s' % (self.binary,
                                                                   self.controller_id,
                                                                   device))
         try:
@@ -203,7 +204,7 @@ class AacraidController(object):
          device attributes
         '''
         pd_list = []
-        stdout,stderr = self.admin.run('%s getconfig %s PD' % (self.binary,
+        stdout,stderr,returncode = self.admin.run('%s getconfig %s PD' % (self.binary,
                                                                self.controller_id))
         res = re.split(" +Device\ #", stdout)
         for item in res:
@@ -264,7 +265,7 @@ class AacraidController(object):
          and a device name as the value
         '''
 
-        stdout,stderr = self.admin.run('%s getconfig %s LD' % (self.binary,
+        stdout,stderr,returncode = self.admin.run('%s getconfig %s LD' % (self.binary,
                                                                self.controller_id))
         ld = stdout.split('\n')
         ld_to_dev = {}
@@ -277,7 +278,7 @@ class AacraidController(object):
         return ld_to_dev
 
     def get_pci_slot(self):
-        stdout, stderr = self.admin.run('%s LIST' % self.binary)
+        stdout,stderr,returncode = self.admin.run('%s LIST' % self.binary)
         tmp = stdout.split('\n')
         slots = {}
         for item in tmp:
@@ -293,13 +294,13 @@ class AacraidController(object):
                 continue
         for key,item in slots.iteritems():
             if int(item) > 100:
-                stdout, stderr = self.admin.run('lspci -d 9005:028d')
+                stdout,stderr,returncode = self.admin.run('lspci -d 9005:028d')
                 hba = stdout.split('\n')
                 for controller in hba:
                     c = controller.split()
                     if c:
                         #print c[0]
-                        stdout1, stderr1 = self.admin.run('lspci -vs %s' % c[0])
+                        stdout1,stderr1,returncode1 = self.admin.run('lspci -vs %s' % c[0])
                         hba1 = stdout1.split('\n')
                         cont_slot = hba1[2].split(':')[1].lstrip()
                         if cont_slot in slots.values():

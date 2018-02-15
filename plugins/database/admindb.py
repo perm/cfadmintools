@@ -9,32 +9,37 @@ class AdminDatabase(object):
 
     @contextmanager
     def get_connection(self, cursor=False):
-        conn = sqlite3.connect(self.db_path)
-        self.conn = None
+        self.conn = sqlite3.connect(self.db_path)
+        #self.conn = None
         try:
             if cursor == True:
-                yield conn.cursor()
+                yield self.conn.cursor()
             else:
-                yield conn
-            conn.commit()
-            conn.close()
+                yield self.conn
+            self.conn.commit()
+            self.conn.close()
         except (sqlite3.DatabaseError, Exception):
-            conn.rollback()
-            conn.close()
+            self.conn.rollback()
+            self.conn.close()
 
     def _execute(self, query):
         with self.get_connection() as connect:
-            res = connect.execute(query)
-        return res
+            type(connect)
+            connect.execute(query)
+        #print 'res is %s' % res
+        #return res
 
     def _execute_script(self, query):
         with self.get_connection() as connect:
             res = connect.executescript(query)
         return res
 
-    def _create_table(self, tablename, query, recreate):
+    def _create_table(self, tablename, query, recreate=False):
         check_exists_query = "SELECT COUNT(*) FROM sqlite_master WHERE name=%s" % tablename
-        exists = self._execute(check_exists_query).fetchone()[0]
+        try:
+            exists = self._execute(check_exists_query).fetchone()[0]
+        except:
+            exists = False
 
         if not recreate and not exists:
             res = self._execute_script(query)
@@ -46,3 +51,4 @@ class AdminDatabase(object):
             return res
         else:
             pass
+

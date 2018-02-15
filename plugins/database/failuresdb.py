@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
+import os
 from admindb import AdminDatabase
+
 
 class FailuresDatabase(AdminDatabase):
 
@@ -9,15 +11,15 @@ class FailuresDatabase(AdminDatabase):
         self.conn = None
         if not os.path.exists(self.db_path) or \
            os.path.getsize(self.db_path) == 0:
-            self.create_table_drive_info()
-            self.create_table_ticket_info()
+            FailuresDatabase.create_table_drive_info(self)
+            FailuresDatabase.create_table_ticket_info(self)
         #check for db, setup a connection
         #check for proper schema
 
     def create_table_drive_info(self, recreate=False):
         tablename = 'drive_info'
         query = """
-            CREATE TABLE %s (
+            CREATE TABLE drive_info (
                     created_date TEXT DEFAULT '0',
                     failed_device TEXT,
                     failed_port TEXT,
@@ -30,9 +32,9 @@ class FailuresDatabase(AdminDatabase):
                     progress INT DEFAULT 1,
                     pager INT DEFAULT 0
             );
-                """  % tablename
+                """
         
-        res =  _create_table(tablename, query, recreate)
+        res =  self._create_table(tablename, query)
         return res
 
     def create_table_ticket_info(self, recreate=False):
@@ -54,9 +56,9 @@ class FailuresDatabase(AdminDatabase):
                     ticket_status INT DEFAULT 1,
                     pager INT DEFAULT 0
             );
-                """  % tablename
+                """ 
 
-        res =  self._create_table(tablename, recreate)
+        res =  self._create_table(tablename, query)
         return res
 
     def insert_drive_info(self, date_id, device, collected_data):
@@ -183,4 +185,7 @@ class FailuresDatabase(AdminDatabase):
 
         res = self._execute(self, query).fetchall()
         return res
+
+if __name__ == '__main__':
+   d = FailuresDatabase('failures.db')
 

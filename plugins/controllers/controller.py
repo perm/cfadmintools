@@ -2,7 +2,7 @@
 
 import re
 import subprocess
-from admin_os import AdminOS
+from ..os_tools.tools import AdminOS
 from pprint import pprint
 
 class StorageController(object):
@@ -38,7 +38,10 @@ class StorageController(object):
         return ld
 
     def get_physical_device(self, device, native=False):
-        pd = self.controller.get_pd_info(device)
+        if native:
+            pd = self.controller.get_pd_info(device, native=True)
+        else:
+            pd = self.controller.get_pd_info(device)
         return pd
    
     def blink_device(self, device, pd=False):
@@ -69,13 +72,21 @@ class StorageController(object):
         result = self.controller.get_bad_pd()
         return result
 
+    def get_pci_slot(self):
+        '''
+        return pci slot # that HBA sits in as a string.
+        if hba is an imbedded controller, return string.
+        "imbedded"
+        '''
+        result = self.controller.get_pci_slot()
+        return result
 
 
 if __name__ == '__main__':
     p = StorageController('8885q', '1', 'sc847')
     #pprint(p.get_logical_device('c1u26'))
-    #pprint(p.get_physical_device('c1u26'))
-    print(p.get_bad_pd())
-    print(p.get_disassociated_pd())
-    print(p.ld_to_raw_device())
+    pprint(p.get_physical_device('c1u26', native=True))
+    #print(p.get_bad_pd())
+    #print(p.get_disassociated_pd())
+    #print(p.ld_to_raw_device())
 

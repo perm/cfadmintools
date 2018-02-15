@@ -12,7 +12,8 @@ class AdminOS(object):
         run_cmd = shlex.split(cmd)
         p = subprocess.Popen(run_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
-        return stdout, stderr
+        returncode = p.returncode
+        return stdout, stderr, returncode
 
     def mount(self, device, label=True, mount_path='/bin/mount', mount_dest=None):
         if label:
@@ -51,6 +52,11 @@ class AdminOS(object):
         return os.readlink(devdir + device + 'p')
             
 
+    def get_servernumber(self):
+        f = open('/root/.servernumber')
+        servernumber = f.read()
+        f.close()
+        return servernumber
 
 if __name__ == '__main__':
     i = AdminOS()

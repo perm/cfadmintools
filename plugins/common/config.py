@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 import ConfigParser
+import re
+
+global root_device
 
 class parseConfig(object):
     def __init__(self, configfile):
@@ -31,6 +34,7 @@ class parseConfig(object):
             return template_dir
         except:
             return '/etc/swift-admintools/templates'
+    
 
     def get_controller_type(self):
         try:
@@ -38,7 +42,7 @@ class parseConfig(object):
             return c_type.lower()
         except:
             return None 
-    
+   
     def get_controller_binary(self):
         try:
             c_binary = self.config.get('controller', 'controller_binary')
@@ -46,19 +50,49 @@ class parseConfig(object):
         except:
             return None
     
+    def get_controller_device_mounts(self):
+        #try:
+           d = {}
+           c_dm = self.config.get('controller', 'device_mounts')
+           c = c_dm.split(',')
+           device_configuration = c[0]
+           #print device_configuration
+           device_mounts = c[-1].split(',')
+           d['drive_config'] = device_configuration
+           device_mount_regex = [re.compile(items) for items in device_mounts]
+           #print device_mounts
+           #print device_mount_regex
+           return c
+        #except:
+        #   return None
+    
+    def get_controller_exclude_mounts(self):
+        c_em = self.config.get('controller', 'exclude_mounts_file')
+        f = open(c_em)
+        exclude_mounts = f.read().split(',')
+        exclude_mounts[-1] = exclude_mounts[-1].rstrip('\n')
+        return exclude_mounts
+    
     def get_secondary_controller(self):
         try:
-            c_type = self.config.get('controller', 'secondary_controller')
+            c_type = self.config.get('secondary_controller', 'controller_type')
             return c_type.lower()
         except:
             return None
 
     def get_secondary_controller_binary(self):
         try:
-            c_binary = self.config.get('controller', 'secondary_controller_binary')
+            c_binary = self.config.get('secondary_controller', 'controller_binary')
             return c_binary.lower()
         except:
             return None
+
+    def get_secondary_controller_device_mounts(self):
+        try:
+           sc_dm = self.config.get('secondary_controller', 'device_mounts')
+           return sc_dm
+        except:
+           return None
 
     def get_enclosure_model(self):
         try:
@@ -96,19 +130,20 @@ class parseConfig(object):
             return None 
 
 if __name__ == '__main__':
-    p = parseConfig('admintools.conf')
-    q = parseConfig('admintools2.conf')
-    print p.get_controller_type()
-    print p.get_controller_binary()
-    print p.get_admintools_homedir()
-    print p.get_admintools_failures_database()
-    print p.get_admintools_template_dir()
-    print p.get_secondary_controller()
-    print p.get_secondary_controller_binary()
-    print p.get_enclosure_model()
-    print q.get_controller_type()
-    print p.get_ticketing_type()
-    print p.get_ticket_requester()
-    print p.get_ticket_user()
-    print p.get_ticket_pass()
-
+    p = parseConfig('/home/jbrown/cfadmintools/plugins/common/swift_admintools.conf')
+    #q = parseConfig('admintools2.conf')
+    print 'controller_type = %s' % (p.get_controller_type())
+    print 'controller_binary = %s' % (p.get_controller_binary())
+    print 'homedir = %s' % (p.get_admintools_homedir())
+    print 'database = %s' % p.get_admintools_failures_database()
+    print 'template_dir = %s' % p.get_admintools_template_dir()
+    print 'controller_type = %s' % p.get_secondary_controller()
+    print 'controller_binary = %s' % p.get_secondary_controller_binary()
+    print 'enclosure_model = %s' % p.get_enclosure_model()
+    print 'ticketing_type = %s' % p.get_ticketing_type()
+    print 'ticket_requester = %s' % p.get_ticket_requester()
+    print 'ticket_user = %s' % p.get_ticket_user()
+    print 'ticket_pass = %s' % p.get_ticket_pass()
+    print 'device_mounts = %s' % p.get_controller_device_mounts()
+    print 'secondary_device_mounts = %s' % p.get_secondary_controller_device_mounts()
+    print 'exclude_device_mounts = %s' % p.get_controller_exclude_mounts()

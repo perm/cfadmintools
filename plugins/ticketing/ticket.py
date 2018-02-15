@@ -2,7 +2,8 @@
 from jinja2 import Environment, FileSystemLoader
 
 class Ticket(object):
-    def __init__(self, template_file, template_path='/Users/jbrown/personal/templates'):
+    #def __init__(self, template_file, template_path='/Users/jbrown/personal/templates'):
+    def __init__(self, template_file, template_path='../templates'):
         self.template_file = template_file
         self.template_path = template_path
         self.env = Environment(loader=FileSystemLoader(template_path))
@@ -19,10 +20,10 @@ if __name__ == '__main__':
     #template = env.get_template('first_template.tpl')
     #print template.render()
     
-    t = Ticket('first_template.tpl')
-    context = {'firstname': 'Jon', 
-               'lastname': 'Brown'}
-    print t.render_template(context)
+    #t = Ticket('first_template.tpl')
+    #context = {'firstname': 'Jon', 
+    #           'lastname': 'Brown'}
+    #print t.render_template(context)
     
 
     t = Ticket('hp380g9_sc847.tpl')
